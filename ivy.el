@@ -2145,8 +2145,26 @@ See `completion-in-region' for further information."
                   (ivy-read (if (string= ivy-count-format "")
                                 prompt
                               (replace-regexp-in-string "%" "%%" prompt))
-                            ;; remove 'completions-first-difference face
-                            (mapcar #'substring-no-properties comps)
+                            ;; FIXME: this is buggy in shell command completion
+                            ;; and probably elsewhere
+                            (--map
+                             (let*
+                                 ((rich it)
+                                  ;; remove 'completions-first-difference face
+                                  (plain (substring-no-properties it))
+                                  (annotation-func
+                                   (plist-get completion-extra-properties
+                                              :annotation-function))
+                                  (annotation (when annotation-func
+                                                (funcall annotation-func rich))))
+                               (add-text-properties
+                                0 (length annotation)
+                                '(face font-lock-comment-face) annotation)
+                               (cons (if annotation
+                                         (format "%s: %s" plain annotation)
+                                       plain)
+                                     plain))
+                             comps)
                             :predicate predicate
                             :initial-input initial
                             :sort t
